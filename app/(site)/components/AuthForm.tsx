@@ -1,11 +1,14 @@
 "use client";
 
+import axios from "axios";
 import { useCallback, useState } from "react";
 import { useForm, FieldValues, SubmitHandler } from "react-hook-form";
 import Input from "@/components/inputs/Input";
 import Button from "@/components/Button";
 import AuthSocialButton from "./AuthSocialButton";
 import { BsGithub, BsGoogle } from "react-icons/bs";
+import { toast } from "react-hot-toast";
+import { signIn } from "next-auth/react";
 
 type Variant = "LOGIN" | "REGISTER";
 
@@ -36,15 +39,41 @@ export default function AuthForm() {
     const onSubmit: SubmitHandler<FieldValues> = (data) => {
         setLoading(true);
         if (variant === "REGISTER") {
-            //register
+            axios
+                .post("/api/register", data)
+                .catch(() => toast.error("Something went wrong"))
+                .finally(() => setLoading(false));
         }
         if (variant === "LOGIN") {
-            // login
+            signIn("credentials", {
+                ...data,
+                redirect: false,
+            })
+                .then((cb) => {
+                    if (cb?.error) {
+                        toast.error("Invalid credentials");
+                    }
+                    if (cb?.ok && !cb.error) {
+                        toast.success("Logged in!");
+                    }
+                })
+                .finally(() => setLoading(false));
         }
     };
-    const socialAction = (provider: string) => {
+    const socialAction = (action: string) => {
         setLoading(true);
-        // NextAuth social
+        signIn(action, {
+            redirect: false,
+        })
+            .then((cb) => {
+                if (cb?.error) {
+                    toast.error("Invalid credentials");
+                }
+                if (cb?.ok && !cb.error) {
+                    toast.success("Logged in!");
+                }
+            })
+            .finally(() => setLoading(false));
     };
     return (
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -72,6 +101,7 @@ export default function AuthForm() {
                         register={register}
                         label="password"
                         disabled={isLoading}
+                        type="password"
                     />
                     <div>
                         <Button type="submit" disabled={isLoading} fullWidth>
